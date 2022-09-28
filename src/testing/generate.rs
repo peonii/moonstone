@@ -162,5 +162,14 @@ pub async fn generate_testcases() {
     let mut file = File::create(testcase_path.join(format!("{}.test", name.trim()))).unwrap();
     file.write_all(test_config.as_bytes()).unwrap();
 
+    // Remove gen and brute
+    if cfg!(windows) {
+        std::fs::remove_file("gen.exe").unwrap();
+        std::fs::remove_file("brute.exe").unwrap();
+    } else {
+        std::fs::remove_file("gen").unwrap();
+        std::fs::remove_file("brute").unwrap();
+    }
+
     println!("Testcases generated!");
 }

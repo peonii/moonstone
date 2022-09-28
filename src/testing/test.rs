@@ -121,4 +121,10 @@ pub async fn test_package() {
             println!("❌ Testcase {} {}", i, "failed".red());
         }
     }
+
+    if cfg!(windows) {
+        std::fs::remove_file("main.exe").unwrap();
+    } else {
+        std::fs::remove_file("main").unwrap();
+    }
 }
