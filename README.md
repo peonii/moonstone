@@ -12,6 +12,20 @@ cargo build --release
 
 2. Add the executable from `target/release` to your PATH
 
+## Usage
+
+📁 Project management
+
+`moonstone new` - Generate a new project
+
+`moonstone init` - Initialize a new project in the current working directory
+
+🧪 Testing
+
+`moonstone generate` - Generate testcases
+
+`moonstone test` - Test your program
+
 ## File structure
 
 ```
