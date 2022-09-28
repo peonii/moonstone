@@ -1,61 +1,12 @@
 use colored::Colorize;
 use std::fs::File;
-use std::io::Write;
-use std::process::{Child, Command, Output};
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::{io, path};
 
-use crate::testing::config::{Test, TestConfig};
+use crate::testing::config::{TestConfig};
+use crate::testing::testcase::generate_testcase;
 
-pub async fn generate_testcase() -> Test {
-    // if the operating system is windows, run different commands
-    let gen: Output;
-    let mut brute: Child;
-    if cfg!(windows) {
-        // Run gen.cpp
-        gen = Command::new(".\\gen.exe")
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .output()
-            .expect("Failed to run gen.cpp");
-
-        brute = Command::new(".\\brute.exe")
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .spawn()
-            .expect("Failed to run brute.cpp");
-    } else {
-        gen = Command::new("./gen")
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .output()
-            .expect("Failed to run gen.cpp");
-
-        brute = Command::new("./brute")
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .spawn()
-            .expect("Failed to run brute.cpp");
-    };
-    let input = String::from_utf8(gen.stdout.clone()).unwrap();
-    brute
-        .stdin
-        .take()
-        .as_mut()
-        .unwrap()
-        .write_all(input.as_bytes())
-        .unwrap();
-
-    let brute_output = brute.wait_with_output().unwrap();
-
-    // Save gen.cpp to the input of the testcase, and brute.cpp to the output of the testcase
-    let test = Test {
-        input: String::from_utf8(gen.stdout).unwrap(),
-        output: String::from_utf8(brute_output.stdout).unwrap(),
-    };
-
-    return test;
-}
 
 pub async fn generate_testcases() {
     // Get the name of the testcase package
@@ -139,7 +90,7 @@ pub async fn generate_testcases() {
             *num += 1;
             let progress_bar =
                 "=".repeat(((*num as f32 / test_config.count as f32 * 20.0) - 1.0) as usize);
-            let progress_bar_empty = " ".repeat(19 - progress_bar.len());
+            let progress_bar_empty = "∙".repeat(19 - progress_bar.len());
             print!(
                 "\r{} [{}>{}] ({}/{})",
                 "⏳ Generating...".blue().bold(),
@@ -153,14 +104,12 @@ pub async fn generate_testcases() {
     }
 
     let res = futures::future::join_all(handles).await;
-    print!("\n");
 
     test_config.tests = res.into_iter().map(|x| x.unwrap()).collect();
 
     // Save the test config
-    let test_config = serde_json::to_string_pretty(&test_config).unwrap();
-    let mut file = File::create(testcase_path.join(format!("{}.test", name.trim()))).unwrap();
-    file.write_all(test_config.as_bytes()).unwrap();
+    let file = File::create(testcase_path.join(format!("{}.test", name.trim()))).unwrap();
+    serde_json::to_writer_pretty(file, &test_config).unwrap();
 
     // Remove gen and brute
     if cfg!(windows) {
@@ -171,5 +120,5 @@ pub async fn generate_testcases() {
         std::fs::remove_file("brute").unwrap();
     }
 
-    println!("Testcases generated!");
+    println!("\r✅ Testcases generated!{}", " ".repeat(50));
 }

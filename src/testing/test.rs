@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::testing::config::TestConfig;
 use colored::Colorize;
-use std::fs;
+use std::fs::File;
 use std::process::{Child, Command};
 
 pub async fn test_package() {
@@ -16,12 +16,9 @@ pub async fn test_package() {
 
     let cwd = std::env::current_dir().expect("Failed to get current directory");
     let path = cwd.join("tests").join(format!("{}.test", name.trim()));
+    let test_config_file = File::open(path).expect("Failed to open test config file");
 
-    let test_config_content = fs::read_to_string(path).unwrap_or_else(|err| {
-        panic!("Failed to read test file: {}", err);
-    });
-
-    let test_config: TestConfig = serde_json::from_str(test_config_content.as_str())
+    let test_config: TestConfig = serde_json::from_reader(test_config_file)
         .unwrap_or_else(|err| {
             panic!("Failed to parse test file: {}", err);
         });
@@ -81,7 +78,7 @@ pub async fn test_package() {
 
             let progress_bar =
                 "=".repeat(((*num as f32 / test_config.count as f32 * 20.0) - 1.0) as usize);
-            let progress_bar_empty = " ".repeat(19 - progress_bar.len());
+            let progress_bar_empty = "∙".repeat(19 - progress_bar.len());
             print!(
                 "\r{} [{}>{}] ({}/{})",
                 "⏳ Testing".blue().bold(),
@@ -96,7 +93,6 @@ pub async fn test_package() {
     futures::future::join_all(handles).await;
 
     let testcases = testcases.lock().unwrap();
-    print!("\n");
 
     let mut passed = 0;
     for i in 0..test_config.count {
@@ -105,20 +101,23 @@ pub async fn test_package() {
         }
     }
 
-    println!(
-        "{} {}/{} testcases",
+    print!("\r{}", " ".repeat(100));
+
+    print!(
+        "\r{} {}/{} testcases",
         "Passed".green().bold(),
         passed,
         test_config.count
     );
 
     if passed == test_config.count {
-        println!("✅ All testcases passed!");
+        print!("\r{}", " ".repeat(100));
+        print!("\r✅ All testcases passed!");
     }
 
     for i in 0..test_config.count {
         if !testcases[i as usize] {
-            println!("❌ Testcase {} {}", i, "failed".red());
+            print!("\n❌ Testcase {} {}", i, "failed".red());
         }
     }
 
@@ -127,4 +126,6 @@ pub async fn test_package() {
     } else {
         std::fs::remove_file("main").unwrap();
     }
+
+    print!("\n");
 }
