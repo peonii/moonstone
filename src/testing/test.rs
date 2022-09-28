@@ -3,11 +3,12 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 
 use crate::testing::config::TestConfig;
+use colored::Colorize;
 use std::fs;
 use std::process::{Child, Command};
 
 pub async fn test_package() {
-    println!("Input the name of the testcase package:");
+    println!("{}", "Input the name of the testcase package:".yellow());
     let mut name = String::new();
     io::stdin()
         .read_line(&mut name)
@@ -25,8 +26,6 @@ pub async fn test_package() {
             panic!("Failed to parse test file: {}", err);
         });
 
-    println!("Testing {}...", name.trim());
-
     // Compile the main.cpp algorithm
     let _compile = Command::new("g++")
         .arg("main.cpp")
@@ -38,6 +37,7 @@ pub async fn test_package() {
     let mut handles = Vec::new();
     let testcases = Arc::new(Mutex::new(vec![false; test_config.count as usize]));
     let tested = Arc::new(Mutex::new(0));
+    print!("\n\n");
 
     for i in 0..test_config.count {
         let ind = i;
@@ -83,8 +83,12 @@ pub async fn test_package() {
                 "=".repeat(((*num as f32 / test_config.count as f32 * 20.0) - 1.0) as usize);
             let progress_bar_empty = " ".repeat(19 - progress_bar.len());
             print!(
-                "\rTesting [{}>{}] ({}/{})",
-                progress_bar, progress_bar_empty, *num, test_config.count
+                "\r{} [{}>{}] ({}/{})",
+                "⏳ Testing".blue().bold(),
+                progress_bar,
+                progress_bar_empty,
+                *num,
+                test_config.count
             );
         }))
     }
@@ -101,15 +105,20 @@ pub async fn test_package() {
         }
     }
 
-    println!("Passed {}/{} testcases", passed, test_config.count);
+    println!(
+        "{} {}/{} testcases",
+        "Passed".green().bold(),
+        passed,
+        test_config.count
+    );
 
     if passed == test_config.count {
-        println!("All testcases passed!");
+        println!("✅ All testcases passed!");
     }
 
     for i in 0..test_config.count {
         if !testcases[i as usize] {
-            println!("Testcase {} failed", i);
+            println!("❌ Testcase {} {}", i, "failed".red());
         }
     }
 }

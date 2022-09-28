@@ -1,6 +1,8 @@
-use std::{fs, io, path};
+use colored::Colorize;
 use std::io::Write;
+use std::{fs, io, path};
 
+use crate::dotfiles::config::GlobalConfig;
 use crate::Error;
 
 ///
@@ -16,12 +18,26 @@ async fn init_path(path: &path::Path) -> Result<(), Error> {
         fs::create_dir(test_path)?;
     }
 
-    let github_url = "https://raw.githubusercontent.com/peonii/oisuite-files/main/";
+    let template_repo = GlobalConfig::load().template_repo;
+    let template_branch = GlobalConfig::load().template_branch;
+    let github_url = format!(
+        "https://raw.githubusercontent.com/{}/{}",
+        template_repo, template_branch
+    );
 
     // TODO: Create files
-    let main_content = reqwest::get(github_url.to_owned() + "main.cpp").await?.text().await?;
-    let brute_content = reqwest::get(github_url.to_owned() + "brute.cpp").await?.text().await?;
-    let gen_content = reqwest::get(github_url.to_owned() + "gen.cpp").await?.text().await?;
+    let main_content = reqwest::get(github_url.to_owned() + "main.cpp")
+        .await?
+        .text()
+        .await?;
+    let brute_content = reqwest::get(github_url.to_owned() + "brute.cpp")
+        .await?
+        .text()
+        .await?;
+    let gen_content = reqwest::get(github_url.to_owned() + "gen.cpp")
+        .await?
+        .text()
+        .await?;
 
     let mut main_file = fs::File::create(path.join("main.cpp"))?;
     let mut brute_file = fs::File::create(path.join("brute.cpp"))?;
@@ -35,7 +51,7 @@ async fn init_path(path: &path::Path) -> Result<(), Error> {
 }
 
 pub async fn new_project() {
-    println!("Input the name of the project:");
+    println!("{}", "🖊️ Input the name of the project:".yellow());
     let cwd = std::env::current_dir().expect("Failed to get current directory");
 
     // Get the name of the project
@@ -46,9 +62,11 @@ pub async fn new_project() {
 
     // Create the test directory
     let path = path::Path::new(&cwd).join(name.trim());
-    init_path(&path).await.expect("Failed to initialize project!");
+    init_path(&path)
+        .await
+        .expect("Failed to initialize project!");
 
-    println!("Generated project {}", name);
+    println!("{} project {}", "Generated".green().bold(), name.bold());
 }
 
 pub async fn init_project() {
@@ -57,7 +75,13 @@ pub async fn init_project() {
 
     // Create the test directory
     let path = path::Path::new(&cwd);
-    init_path(&path).await.expect("Failed to initialize project!");
+    init_path(&path)
+        .await
+        .expect("Failed to initialize project!");
 
-    println!("Generated project in {}", &cwd.display());
+    println!(
+        "{} project in {}",
+        "Generated".green().bold(),
+        &cwd.display()
+    );
 }

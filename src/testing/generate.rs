@@ -1,3 +1,4 @@
+use colored::Colorize;
 use std::fs::File;
 use std::io::Write;
 use std::process::{Child, Command, Output};
@@ -58,13 +59,13 @@ pub async fn generate_testcase() -> Test {
 
 pub async fn generate_testcases() {
     // Get the name of the testcase package
-    println!("Input the name of the testcase package:");
+    println!("{}", "Input the name of the testcase package:".yellow());
     let mut name = String::new();
     io::stdin()
         .read_line(&mut name)
         .expect("Failed to read line");
 
-    println!("Input the time limit for one testcase (ms):");
+    println!("{}", "Input the time limit for one testcase (ms):".yellow());
     // Get the time limit
     let mut time_limit = String::new();
     io::stdin()
@@ -73,7 +74,10 @@ pub async fn generate_testcases() {
 
     let time_limit = time_limit.trim().parse::<u32>().unwrap();
 
-    println!("Input the memory limit for one testcase (MB):");
+    println!(
+        "{}",
+        "Input the memory limit for one testcase (MB):".yellow()
+    );
     // Get the memory limit
     let mut memory_limit = String::new();
     io::stdin()
@@ -82,7 +86,10 @@ pub async fn generate_testcases() {
 
     let memory_limit = memory_limit.trim().parse::<u32>().unwrap();
 
-    println!("Input how many testcases you want to generate:");
+    println!(
+        "{}",
+        "Input how many testcases you want to generate:".yellow()
+    );
     // Get the memory limit
     let mut testcases_number = String::new();
     io::stdin()
@@ -102,6 +109,8 @@ pub async fn generate_testcases() {
     let cwd = std::env::current_dir().expect("Failed to get current directory");
     let testcase_path = path::Path::new(&cwd).join("tests");
 
+    print!("\n\n");
+
     // Compile gen.cpp and brute.cpp
     let _gen = Command::new("g++")
         .arg("gen.cpp")
@@ -120,8 +129,6 @@ pub async fn generate_testcases() {
     let mut handles = vec![];
     // this can't be vec because it's not Copy
 
-    println!("Generating testcases...");
-
     let count = Arc::new(Mutex::new(0));
 
     for _ in 0..testcases_number {
@@ -134,16 +141,19 @@ pub async fn generate_testcases() {
                 "=".repeat(((*num as f32 / test_config.count as f32 * 20.0) - 1.0) as usize);
             let progress_bar_empty = " ".repeat(19 - progress_bar.len());
             print!(
-                "\rGenerating [{}>{}] ({}/{})",
-                progress_bar, progress_bar_empty, *num, test_config.count
+                "\r{} [{}>{}] ({}/{})",
+                "⏳ Generating...".blue().bold(),
+                progress_bar,
+                progress_bar_empty,
+                *num,
+                test_config.count
             );
             return t;
         }))
     }
 
-    println!("");
-
     let res = futures::future::join_all(handles).await;
+    print!("\n");
 
     test_config.tests = res.into_iter().map(|x| x.unwrap()).collect();
 
