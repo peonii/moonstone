@@ -21,7 +21,7 @@ async fn init_path(path: &path::Path) -> Result<(), Error> {
     let template_repo = GlobalConfig::load().template_repo;
     let template_branch = GlobalConfig::load().template_branch;
     let github_url = format!(
-        "https://raw.githubusercontent.com/{}/{}",
+        "https://raw.githubusercontent.com/{}/{}/",
         template_repo, template_branch
     );
 
