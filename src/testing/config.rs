@@ -17,7 +17,7 @@ pub struct Test {
 impl Default for TestConfig {
     fn default() -> Self {
         Self {
-            count: 100,
+            count: 0,
             time_limit: 1000,
             memory_limit: 256,
             tests: Vec::new(),
