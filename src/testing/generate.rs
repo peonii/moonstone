@@ -1,9 +1,10 @@
-use std::process::{Command, Output, Child};
-use std::{io, path};
 use std::fs::File;
 use std::io::Write;
+use std::process::{Child, Command, Output};
+use std::sync::{Arc, Mutex};
+use std::{io, path};
 
-use crate::testing::config::{TestConfig, Test};
+use crate::testing::config::{Test, TestConfig};
 
 pub async fn generate_testcase() -> Test {
     // if the operating system is windows, run different commands
@@ -16,38 +17,43 @@ pub async fn generate_testcase() -> Test {
             .stdout(std::process::Stdio::piped())
             .output()
             .expect("Failed to run gen.cpp");
-        
+
         brute = Command::new(".\\brute.exe")
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .spawn()
             .expect("Failed to run brute.cpp");
-        
     } else {
-        gen = Command::new("gen")
+        gen = Command::new("./gen")
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .output()
             .expect("Failed to run gen.cpp");
 
-        brute = Command::new("brute")
+        brute = Command::new("./brute")
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .spawn()
             .expect("Failed to run brute.cpp");
     };
     let input = String::from_utf8(gen.stdout.clone()).unwrap();
-    brute.stdin.take().as_mut().unwrap().write_all(input.as_bytes()).unwrap();
+    brute
+        .stdin
+        .take()
+        .as_mut()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .unwrap();
 
     let brute_output = brute.wait_with_output().unwrap();
-    
+
     // Save gen.cpp to the input of the testcase, and brute.cpp to the output of the testcase
     let test = Test {
         input: String::from_utf8(gen.stdout).unwrap(),
         output: String::from_utf8(brute_output.stdout).unwrap(),
     };
 
-    return test
+    return test;
 }
 
 pub async fn generate_testcases() {
@@ -89,7 +95,7 @@ pub async fn generate_testcases() {
         count: testcases_number,
         time_limit,
         memory_limit,
-        tests: Vec::new()
+        tests: Vec::new(),
     };
 
     // Get the current test
@@ -103,24 +109,39 @@ pub async fn generate_testcases() {
         .arg("gen")
         .output()
         .expect("Failed to compile gen.cpp");
-    
+
     let _brute = Command::new("g++")
         .arg("brute.cpp")
         .arg("-o")
         .arg("brute")
         .output()
         .expect("Failed to compile brute.cpp");
-    
+
     let mut handles = vec![];
     // this can't be vec because it's not Copy
 
     println!("Generating testcases...");
-    
+
+    let count = Arc::new(Mutex::new(0));
+
     for _ in 0..testcases_number {
+        let count = Arc::clone(&count);
         handles.push(tokio::spawn(async move {
-            generate_testcase().await
+            let t = generate_testcase().await;
+            let mut num = count.lock().unwrap();
+            *num += 1;
+            let progress_bar =
+                "=".repeat(((*num as f32 / test_config.count as f32 * 20.0) - 1.0) as usize);
+            let progress_bar_empty = " ".repeat(19 - progress_bar.len());
+            print!(
+                "\rGenerating [{}>{}] ({}/{})",
+                progress_bar, progress_bar_empty, *num, test_config.count
+            );
+            return t;
         }))
     }
+
+    println!("");
 
     let res = futures::future::join_all(handles).await;
 
