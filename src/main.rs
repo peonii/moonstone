@@ -1,14 +1,10 @@
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
-#![warn(clippy::unwrap_used)]
-#![warn(clippy::expect_used)]
+use moonstone::lib_main;
 
-use std::fs;
-
-fn main() {
-    println!("Hello, world!");
-
-    let idk = fs::read("asdfasd").unwrap();
-
-    println!("{idk:?}");
+#[tokio::main]
+async fn main() {
+    if lib_main().await.is_ok() {
+        std::process::exit(0);
+    } else {
+        std::process::exit(1);
+    }
 }

@@ -10,25 +10,25 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  linux:
+  Linux:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
-      - name: Build
-        run: cargo build --verbose
       - name: Lint
         run: cargo clippy -- -Dwarnings
+      - name: Build
+        run: cargo build --verbose
       - name: Test
         run: cargo test
-  windows:
+  Windows:
     runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v3
-      - name: Build
-        run: cargo build --verbose
       - name: Lint
         run: cargo clippy -- -Dwarnings
+      - name: Build
+        run: cargo build --verbose
       - name: Test
         run: cargo test

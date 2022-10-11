@@ -14,3 +14,12 @@ name = "mst"
 path = "src/main.rs"
 
 [dependencies]
+clap = { version = "4.0.13", features = ["derive"] }
+colored = "2.0.0"
+git2 = "0.15.0"
+hex = "0.4.3"
+home = "0.5.4"
+serde = { version = "1.0.145", features = ["derive"] }
+sha2 = "0.10.6"
+tokio = { version = "1.21.2", features = [ "full" ] }
+toml = "0.5.9"
