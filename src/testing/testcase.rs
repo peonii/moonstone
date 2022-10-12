@@ -44,6 +44,11 @@ impl TestPackage {
         self.tests.push(Test { input, output });
     }
 
+    /**
+    This function generates `amount` number of tests.
+
+    This requires the files `brute(.exe)` and `gen(.exe)` to be present.
+     */
     pub async fn generate_tests(&mut self, amount: u32) -> Result<(), Error> {
         println!("{} 📃 Compiling test generators...", "[1/2]".dimmed());
         let config = Config::load()?;
@@ -69,6 +74,7 @@ impl TestPackage {
 
         println!("{} 🧪 Generating testcases...", "[2/2]".dimmed());
 
+        // Set the progress bar up
         let pb_style = match ProgressStyle::with_template(
             "[{bar:20}] {pos}/{len} ({percent}%) - {eta} remaining...",
         ) {
@@ -79,6 +85,7 @@ impl TestPackage {
         let mut handles = vec![];
         let bar = Arc::new(Mutex::new(ProgressBar::new(amount.into())));
 
+        // This is in braces to unlock the mutex after we modify the style
         {
             let pb = bar.lock();
             if let Ok(pb) = pb {
@@ -123,6 +130,10 @@ impl TestPackage {
         Ok(())
     }
 
+    /**
+        Save this testcase to a file in the `tests/` directory.
+        The filename is `<name>.json`.
+     */
     pub fn save(&self) -> Result<(), Error> {
         let current_dir = std::env::current_dir()?;
         let path = current_dir.join("tests");
@@ -133,20 +144,36 @@ impl TestPackage {
         Ok(())
     }
 
+    /**
+        Load a new testcase from a file.
+        The file has to be encoded in JSON, and has to be deserializable.
+    */
     pub fn load(name: &str) -> Result<Self, Error> {
         let current_dir = std::env::current_dir()?;
         let path = current_dir.join("tests");
         let file_name = format!("{}.json", name);
+
         let file_json = fs::read_to_string(path.join(file_name))?;
         let test_package: Self = serde_json::from_str(&file_json)?;
         Ok(test_package)
     }
 
+    /**
+        Test the current package.
+
+        This does 3 things:
+        * compiles the `main` executable (has to be called main)
+        * runs each test in the package
+        * verifies each test's result
+
+        This is meant as an interactive tester, that's why I included the println! macros.
+    */
     pub async fn test(&self) -> Result<(), Error> {
         println!("{} 📃 Compiling program...", "[1/3]".dimmed());
         let mut handles = vec![];
         let config = Config::load()?;
 
+        // Compile the main program, using the first argument as the executable name, and the rest as the args
         let main_compile_command: Vec<&str> = config.main_compile_command.split(' ').collect();
         let main_c = Command::new(&main_compile_command[0])
             .args(&main_compile_command[1..])
@@ -158,6 +185,9 @@ impl TestPackage {
 
         println!("{} 🧪 Testing...", "[2/3]".dimmed());
 
+        // Set the progress bar up
+
+        // This is needed, because we need to convert usize to u64, and we can't just do .into()
         let amount = self.tests.len() as u64;
 
         let pb_style = match ProgressStyle::with_template(
@@ -169,6 +199,7 @@ impl TestPackage {
 
         let bar = Arc::new(Mutex::new(ProgressBar::new(amount)));
 
+        // This is in braces to make sure the lock is dropped just after setting the style
         {
             let pb = bar.lock();
             if let Ok(pb) = &pb {
@@ -176,10 +207,13 @@ impl TestPackage {
             }
         }
 
+        // Set the tests up
         for test in &self.tests {
             let local_test = test.clone();
             let tl = self.time_limit;
             let b_local = Arc::clone(&bar);
+
+            // Unfortunately, this can't be cleaned up, sorry :p
             handles.push(tokio::spawn(async move {
                 let t = local_test.test(tl);
                 let prog = b_local.lock();
@@ -192,6 +226,7 @@ impl TestPackage {
 
         let res = futures::future::join_all(handles).await;
 
+        // Finish the bar (required)
         let bar = bar.lock();
         if let Ok(bar) = bar {
             bar.finish();
@@ -199,8 +234,11 @@ impl TestPackage {
 
         println!("{} 🔑 Verifying testcases...", "[3/3]".dimmed());
 
+        // Yes, these two variables are ugly, I know
         let mut i = 1;
         let mut correct = 0;
+
+        // Iterate through each test and verify its status
         for test in res {
             let test_unwrapped = test??; // LMAO
 
@@ -295,7 +333,6 @@ impl Test {
         Ok(Self { input, output })
     }
 
-    // TODO: Add memory limit
     pub fn test(&self, tl: u128) -> Result<TestResult, Error> {
         let mut main: Child;
 
