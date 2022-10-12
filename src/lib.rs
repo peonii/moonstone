@@ -7,9 +7,9 @@
 #![allow(clippy::unused_async)]
 
 mod args;
+mod cache;
 mod config;
 mod project;
-mod cache;
 
 use colored::Colorize;
 use config::file::Config;
@@ -19,19 +19,19 @@ use crate::cache::repo::RepoCache;
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 /**
- The main function of the library.
-  
- # Errors
- * Every error that is returned is already printed to the console.
- * No need to handle them yourself.
- */
+The main function of the library.
+
+# Errors
+* Every error that is returned is already printed to the console.
+* No need to handle them yourself.
+*/
 pub async fn lib_main() -> Result<(), Error> {
     // Check for first load and create config if needed
     if Config::load().is_err() {
         let config = Config::new();
         config.save()?;
         let mut repo = RepoCache::new();
-        repo.clone_repo(&config.repo_link)?;
+        repo.clone_repo(&config.repo_link, &config.repo_branch)?;
         println!("It looks like this is your first time using Moonstone. A config file has been created at {}.", "~/.mst/config.toml".bright_blue());
     }
 

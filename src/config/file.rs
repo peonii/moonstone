@@ -5,12 +5,14 @@ use crate::Error;
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub repo_link: String,
+    pub repo_branch: String
 }
 
 impl Config {
     pub fn new() -> Self {
         Self {
             repo_link: "https://github.com/peonii/mst-defaults.git".to_string(),
+            repo_branch: "main".to_string()
         }
     }
 
