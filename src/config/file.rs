@@ -1,18 +1,24 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::Error;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub repo_link: String,
-    pub repo_branch: String
+    pub repo_branch: String,
+    pub gen_compile_command: String,
+    pub brute_compile_command: String,
+    pub main_compile_command: String,
 }
 
 impl Config {
     pub fn new() -> Self {
         Self {
             repo_link: "https://github.com/peonii/mst-defaults.git".to_string(),
-            repo_branch: "main".to_string()
+            repo_branch: "main".to_string(),
+            gen_compile_command: "g++ gen.cpp -o gen".to_string(),
+            brute_compile_command: "g++ brute.cpp -o brute".to_string(),
+            main_compile_command: "g++ main.cpp -o main".to_string(),
         }
     }
 

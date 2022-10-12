@@ -9,7 +9,7 @@ use std::{
     time::Instant,
 };
 
-use crate::Error;
+use crate::{config::file::Config, Error};
 use colored::Colorize;
 
 pub enum TestResult {
@@ -46,22 +46,21 @@ impl TestPackage {
 
     pub async fn generate_tests(&mut self, amount: u32) -> Result<(), Error> {
         println!("{} 📃 Compiling test generators...", "[1/2]".dimmed());
+        let config = Config::load()?;
 
         // Compile the testcase generators
-        let generator = Command::new("g++")
-            .arg("-o")
-            .arg("gen")
-            .arg("gen.cpp")
+        let gen_compile_args: Vec<&str> = config.gen_compile_command.split(' ').collect();
+        let generator = Command::new(&gen_compile_args[0])
+            .args(&gen_compile_args[1..])
             .output();
 
         if let Err(e) = generator {
             return Err(e.into());
         }
 
-        let brute = Command::new("g++")
-            .arg("-o")
-            .arg("brute")
-            .arg("brute.cpp")
+        let brute_compile_args: Vec<&str> = config.brute_compile_command.split(' ').collect();
+        let brute = Command::new(&brute_compile_args[0])
+            .args(&brute_compile_args[1..])
             .output();
 
         if let Err(e) = brute {
@@ -146,11 +145,11 @@ impl TestPackage {
     pub async fn test(&self) -> Result<(), Error> {
         println!("{} 📃 Compiling program...", "[1/3]".dimmed());
         let mut handles = vec![];
+        let config = Config::load()?;
 
-        let main_c = Command::new("g++")
-            .arg("-o")
-            .arg("main")
-            .arg("main.cpp")
+        let main_compile_command: Vec<&str> = config.main_compile_command.split(' ').collect();
+        let main_c = Command::new(&main_compile_command[0])
+            .args(&main_compile_command[1..])
             .output();
 
         if let Err(e) = main_c {

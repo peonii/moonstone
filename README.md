@@ -36,8 +36,6 @@ it's an incredibly easy process.
 
 ## File Structure
 
-## File structure
-
 ```
 📄 main.cpp - Main algorithm
 📄 brute.cpp - Brute-force algorithm (used for generating output)
