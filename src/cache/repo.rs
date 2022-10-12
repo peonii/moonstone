@@ -85,7 +85,7 @@ impl RepoCache {
         repo_name_hash.update(branch);
         let repo_name_hash = repo_name_hash.finalize();
 
-        let repo_name_hash = hex::encode(&repo_name_hash);
+        let repo_name_hash = hex::encode(repo_name_hash);
 
         let repo_path = repo_path.join(&repo_name_hash);
 
@@ -100,13 +100,13 @@ impl RepoCache {
         self.repos.push(Repo {
             link: repo.clone(),
             branch: branch.clone(),
-            hash: repo_name_hash.clone(),
+            hash: repo_name_hash,
         });
         self.save()
     }
 
     pub fn exists(&self, repo: &str, branch: &String) -> bool {
-        for repo_obj in self.repos.iter() {
+        for repo_obj in &self.repos {
             if repo_obj.link == repo && &repo_obj.branch == branch {
                 return true;
             }

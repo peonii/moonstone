@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use crate::{Error, project::generation};
+use crate::{Error, project::generation, testing};
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -43,12 +43,10 @@ pub async fn match_command() -> Result<(), Error> {
             generation::new_project(None)
         }
         Commands::Generate { name, amount, time_limit, memory_limit } => {
-            println!("Generate command with name: {name}, amount: {amount}, time_limit: {time_limit}, memory_limit: {memory_limit}");
-            Ok(())
+            testing::generation::generate_tests(name, amount, time_limit, memory_limit).await
         }
         Commands::Test { name } => {
-            println!("Test command with name: {name}");
-            Ok(())
+            testing::test::test_package(name).await
         }
     }
 }

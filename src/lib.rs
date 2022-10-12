@@ -3,13 +3,12 @@
 #![warn(clippy::unwrap_used)]
 #![warn(clippy::expect_used)]
 #![allow(clippy::module_name_repetitions)]
-// THIS IS TEMPORARY, REMOVE THIS WHEN DOING TESTING
-#![allow(clippy::unused_async)]
 
 mod args;
 mod cache;
 mod config;
 mod project;
+mod testing;
 
 use colored::Colorize;
 use config::file::Config;
