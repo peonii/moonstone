@@ -1,9 +1,12 @@
 use indicatif::{ProgressBar, ProgressStyle};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use std::{
-    process::{Command, Output, Child},
-    io::Write, fs, time::Instant, sync::{Mutex, Arc}
+    fs,
+    io::Write,
+    process::{Child, Command, Output},
+    sync::{Arc, Mutex},
+    time::Instant,
 };
 
 use crate::Error;
@@ -19,17 +22,17 @@ pub enum TestResult {
 pub struct TestPackage {
     pub name: String,
     pub tests: Vec<Test>,
-    pub time_limit: u32,
+    pub time_limit: u128,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Test {
     pub input: String,
-    pub output: String
+    pub output: String,
 }
 
 impl TestPackage {
-    pub fn new(name: String, time_limit: u32) -> Self {
+    pub const fn new(name: String, time_limit: u128) -> Self {
         Self {
             name,
             tests: Vec::new(),
@@ -38,17 +41,11 @@ impl TestPackage {
     }
 
     pub fn add_test(&mut self, input: String, output: String) {
-        self.tests.push(Test {
-            input,
-            output
-        });
+        self.tests.push(Test { input, output });
     }
 
     pub async fn generate_tests(&mut self, amount: u32) -> Result<(), Error> {
-        println!(
-            "{} 📃 Compiling test generators...",
-            "[1/2]".dimmed()
-        );
+        println!("{} 📃 Compiling test generators...", "[1/2]".dimmed());
 
         // Compile the testcase generators
         let generator = Command::new("g++")
@@ -66,43 +63,40 @@ impl TestPackage {
             .arg("brute")
             .arg("brute.cpp")
             .output();
-        
+
         if let Err(e) = brute {
             return Err(e.into());
         }
 
-        println!(
-            "{} 🧪 Generating testcases...",
-            "[2/2]".dimmed()
-        );
+        println!("{} 🧪 Generating testcases...", "[2/2]".dimmed());
 
-        let pb_style = match ProgressStyle::with_template("[{bar:20}] {pos}/{len} ({percent}%) - {eta} remaining...") {
+        let pb_style = match ProgressStyle::with_template(
+            "[{bar:20}] {pos}/{len} ({percent}%) - {eta} remaining...",
+        ) {
             Ok(style) => style,
-            Err(e) => return Err(e.into())
+            Err(e) => return Err(e.into()),
         };
 
         let mut handles = vec![];
-        let bar = Arc::new(Mutex::new(
-               ProgressBar::new(amount.into())
-        ));
+        let bar = Arc::new(Mutex::new(ProgressBar::new(amount.into())));
 
-        let pb = bar.lock();
-        if let Ok(pb) = pb {
-            pb.set_style(pb_style);
+        {
+            let pb = bar.lock();
+            if let Ok(pb) = pb {
+                pb.set_style(pb_style);
+            }
         }
 
         for _ in 0..amount {
             let b_local = Arc::clone(&bar);
-            handles.push(
-                tokio::spawn(async move {
-                    let t = Test::generate_testcase();
-                    let prog = b_local.lock();
-                    if let Ok(prog) = prog {
-                        prog.inc(1);
-                    }
-                    return t;
-                })
-            );
+            handles.push(tokio::spawn(async move {
+                let t = Test::generate_testcase();
+                let prog = b_local.lock();
+                if let Ok(prog) = prog {
+                    prog.inc(1);
+                }
+                t
+            }));
         }
 
         let res = futures::future::join_all(handles).await;
@@ -111,7 +105,7 @@ impl TestPackage {
         if let Ok(bar) = bar {
             bar.finish();
         }
-        
+
         for test in res {
             let test_unwrapped = test??; // LMAO
             self.add_test(test_unwrapped.input, test_unwrapped.output);
@@ -128,8 +122,8 @@ impl TestPackage {
         println!("✅ Successfully generated {} testcases!", amount);
 
         Ok(())
-    } 
-    
+    }
+
     pub fn save(&self) -> Result<(), Error> {
         let current_dir = std::env::current_dir()?;
         let path = current_dir.join("tests");
@@ -140,7 +134,7 @@ impl TestPackage {
         Ok(())
     }
 
-    pub fn load(name: String) -> Result<Self, Error> {
+    pub fn load(name: &str) -> Result<Self, Error> {
         let current_dir = std::env::current_dir()?;
         let path = current_dir.join("tests");
         let file_name = format!("{}.json", name);
@@ -149,11 +143,8 @@ impl TestPackage {
         Ok(test_package)
     }
 
-    pub async fn test<'a>(&'a self) -> Result<(), Error> {
-        println!(
-            "{} 📃 Compiling program...",
-            "[1/3]".dimmed()
-        );
+    pub async fn test(&self) -> Result<(), Error> {
+        println!("{} 📃 Compiling program...", "[1/3]".dimmed());
         let mut handles = vec![];
 
         let main_c = Command::new("g++")
@@ -166,41 +157,38 @@ impl TestPackage {
             return Err(e.into());
         }
 
-        println!(
-            "{} 🧪 Testing...",
-            "[2/3]".dimmed()
-        );
+        println!("{} 🧪 Testing...", "[2/3]".dimmed());
 
         let amount = self.tests.len() as u64;
 
-        let pb_style = match ProgressStyle::with_template("[{bar:20}] {pos}/{len} ({percent}%) - {eta} remaining...") {
+        let pb_style = match ProgressStyle::with_template(
+            "[{bar:20}] {pos}/{len} ({percent}%) - {eta} remaining...",
+        ) {
             Ok(style) => style,
-            Err(e) => return Err(e.into())
+            Err(e) => return Err(e.into()),
         };
 
-        let bar = Arc::new(Mutex::new(
-               ProgressBar::new(amount)
-        ));
+        let bar = Arc::new(Mutex::new(ProgressBar::new(amount)));
 
-        let pb = bar.lock();
-        if let Ok(pb) = pb {
-            pb.set_style(pb_style);
+        {
+            let pb = bar.lock();
+            if let Ok(pb) = &pb {
+                pb.set_style(pb_style);
+            }
         }
 
         for test in &self.tests {
             let local_test = test.clone();
             let tl = self.time_limit;
             let b_local = Arc::clone(&bar);
-            handles.push(
-                tokio::spawn(async move {
-                    let t = local_test.test(tl);
-                    let prog = b_local.lock();
-                    if let Ok(prog) = prog {
-                        prog.inc(1);
-                    }
-                    return t;
-                })
-            );
+            handles.push(tokio::spawn(async move {
+                let t = local_test.test(tl);
+                let prog = b_local.lock();
+                if let Ok(prog) = prog {
+                    prog.inc(1);
+                }
+                t
+            }));
         }
 
         let res = futures::future::join_all(handles).await;
@@ -210,11 +198,8 @@ impl TestPackage {
             bar.finish();
         }
 
-        println!(
-            "{} 🔑 Verifying testcases...",
-            "[3/3]".dimmed()
-        );
-        
+        println!("{} 🔑 Verifying testcases...", "[3/3]".dimmed());
+
         let mut i = 1;
         let mut correct = 0;
         for test in res {
@@ -234,14 +219,26 @@ impl TestPackage {
                     println!("❌ Testcase #{i} {}: ", "failed".red());
                     println!("\tProgram timed out");
                 }
-            } 
+            }
             i += 1;
         }
 
-        if correct != self.tests.len() {
-            println!("{} {}/{} testcases {}", "✅".green(), correct, self.tests.len(), "passed".green());
-        } else {
+        if correct == self.tests.len() {
             println!("{} All testcases {}", "🎉".green(), "passed!".green());
+        } else {
+            println!(
+                "{} {}/{} testcases {}",
+                "✅".green(),
+                correct,
+                self.tests.len(),
+                "passed".green()
+            );
+        }
+
+        if cfg!(windows) {
+            std::fs::remove_file("main.exe")?;
+        } else {
+            std::fs::remove_file("main")?;
         }
 
         Ok(())
@@ -265,10 +262,9 @@ impl Test {
                 .output();
         }
 
-        
         let gen = match gen {
             Ok(gen) => gen,
-            Err(e) => return Err(e.into())
+            Err(e) => return Err(e.into()),
         };
 
         let input = String::from_utf8(gen.stdout)?;
@@ -297,14 +293,11 @@ impl Test {
 
         let output = String::from_utf8(brute_output.stdout)?;
 
-        Ok(Self {
-            input,
-            output
-        })
+        Ok(Self { input, output })
     }
 
     // TODO: Add memory limit
-    pub fn test(&self, tl: u32) -> Result<TestResult, Error> {
+    pub fn test(&self, tl: u128) -> Result<TestResult, Error> {
         let mut main: Child;
 
         let clock = Instant::now();
@@ -334,10 +327,9 @@ impl Test {
         let output = String::from_utf8(main_output.stdout)?;
 
         let time = clock.elapsed().as_millis();
-        let time = time as u32;
 
         if output != self.output {
-            return Ok(TestResult::WrongAnswer(output.clone(), self.output.clone()));
+            return Ok(TestResult::WrongAnswer(output, self.output.clone()));
         }
 
         if time > tl {

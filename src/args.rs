@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use clap::{Parser, Subcommand};
 
-use crate::{Error, project::generation, testing};
+use crate::{cache, project::generation, testing, Error};
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -22,37 +22,35 @@ pub enum Commands {
         amount: u32,
 
         #[arg(default_value_t = 5000, short, long)]
-        time_limit: u32,
+        time_limit: u128,
     },
     Test {
-        name: String
-    }
+        name: String,
+    },
+    ResetCache,
 }
 
 ///
 /// Parses the command line arguments and executes the appropriate command
-/// 
+///
 pub async fn match_command() -> Result<(), Error> {
     let cli = Cli::parse();
 
     let timer = Instant::now();
 
     let result = match cli.command {
-        Commands::New { name } => {
-            generation::new_project(Some(&name))
-        }
-        Commands::Init => {
-            generation::new_project(None)
-        }
-        Commands::Generate { name, amount, time_limit } => {
-            testing::generation::generate_tests(name, amount, time_limit).await
-        }
-        Commands::Test { name } => {
-            testing::test::test_package(name).await
-        }
+        Commands::New { name } => generation::new_project(Some(&name)),
+        Commands::Init => generation::new_project(None),
+        Commands::Generate {
+            name,
+            amount,
+            time_limit,
+        } => testing::generation::generate_tests(name, amount, time_limit).await,
+        Commands::Test { name } => testing::test::test_package(name).await,
+        Commands::ResetCache => cache::reset::reset_cache(),
     };
 
     println!("✨ Done in {}s", timer.elapsed().as_secs_f64());
 
-    return result;
+    result
 }
