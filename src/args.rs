@@ -28,6 +28,7 @@ pub enum Commands {
         name: String,
     },
     ResetCache,
+    ResetConfig,
     Run
 }
 
@@ -49,6 +50,7 @@ pub async fn match_command() -> Result<(), Error> {
         } => testing::generation::generate_tests(name, amount, time_limit).await,
         Commands::Test { name } => testing::test::test_package(name).await,
         Commands::ResetCache => cache::reset::reset_cache(),
+        Commands::ResetConfig => cache::reset::reset_config(),
         Commands::Run => project::run::run_project()
     };
 

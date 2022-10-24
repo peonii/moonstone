@@ -6,7 +6,7 @@ use std::{
     io::Write,
     process::{Child, Command, Output},
     sync::{Arc, Mutex},
-    time::Instant,
+    time::{self, Instant},
 };
 
 use crate::{config::file::Config, Error};
@@ -238,6 +238,11 @@ impl TestPackage {
         let mut i = 1;
         let mut correct = 0;
 
+        let mut log_string = format!("### PACKAGE NAME: {}", self.name);
+        let now_timestamp = time::SystemTime::now().duration_since(time::SystemTime::UNIX_EPOCH)?;
+
+        log_string += format!("\nTIMESTAMP: {}\n", now_timestamp.as_millis()).as_str();
+
         // Iterate through each test and verify its status
         for test in res {
             let test_unwrapped = test??; // LMAO
@@ -245,16 +250,23 @@ impl TestPackage {
             match test_unwrapped {
                 TestResult::Accepted => {
                     correct += 1;
+
+                    log_string += format!("\nTestcase {i} OK").as_str();
+
+                    println!("✅ Testcase #{i}... {}", "ok".green());
                 }
                 TestResult::WrongAnswer(output, expected) => {
-                    println!("❌ Testcase #{i} {}: ", "failed".red());
-                    println!("\tWrong answer");
-                    println!("\tExpected: {expected}",);
-                    println!("\tGot: {output}");
+                    println!("❌ Testcase #{i}... {}", "failed".red());
+
+                    log_string += format!("\nTestcase {i} FAIL").as_str();
+                    log_string += format!("\n\tExpected {expected}").as_str();
+                    log_string += format!("\n\tReceived {output}").as_str();
                 }
                 TestResult::Timeout => {
-                    println!("❌ Testcase #{i} {}: ", "failed".red());
+                    println!("❌ Testcase #{i} {}... ", "failed".red());
                     println!("\tProgram timed out");
+
+                    log_string += format!("\nTestcase {i} TIMEOUT").as_str();
                 }
             }
             i += 1;
@@ -271,6 +283,13 @@ impl TestPackage {
                 "passed".green()
             );
         }
+
+        println!("Log written to {}-log.txt.", now_timestamp.as_millis());
+
+        std::fs::write(
+            format!("{}-log.txt", now_timestamp.as_millis()),
+            log_string
+        )?;
 
         if cfg!(windows) {
             std::fs::remove_file("main.exe")?;
