@@ -114,7 +114,7 @@ impl TestPackage {
 
         for test in res {
             let test_unwrapped = test??; // LMAO
-            self.add_test(test_unwrapped.input, test_unwrapped.output);
+            self.add_test(test_unwrapped.input.trim().to_string(), test_unwrapped.output.trim().to_string());
         }
 
         if cfg!(windows) {
@@ -383,7 +383,7 @@ impl Test {
 
         let time = clock.elapsed().as_millis();
 
-        if output != self.output {
+        if output.trim() != self.output.trim() {
             return Ok(TestResult::WrongAnswer(output, self.output.clone()));
         }
 
