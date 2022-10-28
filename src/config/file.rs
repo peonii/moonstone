@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::Error;
+use crate::{home, Error};
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -27,11 +27,7 @@ impl Config {
      * The config file is located at `~/.mst/config.toml`
      */
     pub fn load() -> Result<Self, Error> {
-        let home_directory = match home::home_dir() {
-            Some(path) => path,
-            None => return Err("Could not find home directory".into()),
-        };
-
+        let home_directory = home!();
         let config_path = home_directory.join(".mst").join("config.toml");
 
         if !config_path.try_exists()? {
@@ -49,10 +45,7 @@ impl Config {
      * The default path is `~/.mst/config.toml`
      */
     pub fn save(&self) -> Result<(), Error> {
-        let home_directory = match home::home_dir() {
-            Some(path) => path,
-            None => return Err("Could not find home directory".into()),
-        };
+        let home_directory = home!();
 
         let config_path = home_directory.join(".mst");
 

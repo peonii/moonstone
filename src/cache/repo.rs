@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::Error;
+use crate::{home, Error};
 use git2::build::RepoBuilder;
 use sha2::{Digest, Sha256};
 
@@ -27,10 +27,7 @@ impl RepoCache {
     Default cache path location is `~/.mst/.cacheindex.toml`
     */
     pub fn load() -> Result<Self, Error> {
-        let home_directory = match home::home_dir() {
-            Some(path) => path,
-            None => return Err("Could not find home directory".into()),
-        };
+        let home_directory = home!();
 
         let cache_path = home_directory.join(".mst").join(".cacheindex.toml");
 
@@ -48,11 +45,7 @@ impl RepoCache {
     Default cache path location is `~/.mst/.cacheindex.toml`
     */
     pub fn save(&self) -> Result<(), Error> {
-        let home_directory = match home::home_dir() {
-            Some(path) => path,
-            None => return Err("Could not find home directory".into()),
-        };
-
+        let home_directory = home!();
         let cache_path = home_directory.join(".mst");
 
         if !cache_path.try_exists()? {
@@ -67,11 +60,7 @@ impl RepoCache {
     }
 
     pub fn clone_repo(&mut self, repo: &String, branch: &String) -> Result<(), Error> {
-        let home_directory = match home::home_dir() {
-            Some(path) => path,
-            None => return Err("Could not find home directory".into()),
-        };
-
+        let home_directory = home!();
         let repo_path = home_directory.join(".mst").join("cache");
         if !repo_path.try_exists()? {
             std::fs::create_dir_all(&repo_path)?;
@@ -115,11 +104,7 @@ impl RepoCache {
     }
 
     pub fn get_path_of_repo(repo: &String, branch: &String) -> Result<PathBuf, Error> {
-        let home_directory = match home::home_dir() {
-            Some(path) => path,
-            None => return Err("Could not find home directory".into()),
-        };
-
+        let home_directory = home!();
         let repo_path = home_directory.join(".mst").join("cache");
 
         // Generate a hash of the repo link (sha256, encoded in hex)

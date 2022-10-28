@@ -8,7 +8,9 @@ mod args;
 mod cache;
 mod config;
 mod project;
+mod replace;
 mod testing;
+mod utils;
 
 use colored::Colorize;
 use config::file::Config;
@@ -31,6 +33,11 @@ pub async fn lib_main() -> Result<(), Error> {
         config.save()?;
         let mut repo = RepoCache::new();
         repo.clone_repo(&config.repo_link, &config.repo_branch)?;
+
+        if let Some(home_path) = home::home_dir() {
+            std::fs::create_dir(home_path.join(".mst").join("libs"))?;
+        }
+
         println!("It looks like this is your first time using Moonstone. A config file has been created at {}.", "~/.mst/config.toml".bright_blue());
     }
 

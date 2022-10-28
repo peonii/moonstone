@@ -2,7 +2,11 @@ use std::time::Instant;
 
 use clap::{Parser, Subcommand};
 
-use crate::{cache, project::{self, generation}, testing, Error};
+use crate::{
+    cache,
+    project::{self, generation},
+    testing, Error,
+};
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -29,7 +33,8 @@ pub enum Commands {
     },
     ResetCache,
     ResetConfig,
-    Run
+    Run,
+    Compile,
 }
 
 ///
@@ -51,7 +56,8 @@ pub async fn match_command() -> Result<(), Error> {
         Commands::Test { name } => testing::test::test_package(name).await,
         Commands::ResetCache => cache::reset::reset_cache(),
         Commands::ResetConfig => cache::reset::reset_config(),
-        Commands::Run => project::run::run_project()
+        Commands::Run => project::run::run_project(),
+        Commands::Compile => project::compile::compile_program(),
     };
 
     println!("✨ Done in {}s", timer.elapsed().as_secs_f64());

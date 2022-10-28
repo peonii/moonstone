@@ -1,7 +1,7 @@
 use std::fs;
 
 use crate::config::file::Config;
-use crate::Error;
+use crate::{home, Error};
 
 use super::repo::RepoCache;
 
@@ -16,11 +16,7 @@ pub fn reset_cache() -> Result<(), Error> {
     let cache = RepoCache::new();
     cache.save()?;
 
-    let home_directory = match home::home_dir() {
-        Some(path) => path,
-        None => return Err("Could not find home directory".into()),
-    };
-
+    let home_directory = home!();
     let cache_path = home_directory.join(".mst").join("cache");
 
     fs::remove_dir_all(&cache_path)?;
@@ -40,17 +36,13 @@ pub fn reset_config() -> Result<(), Error> {
 
     println!("⏳ Resetting config...");
 
-    let home_directory = match home::home_dir() {
-        Some(path) => path,
-        None => return Err("Could not find home directory".into()),
-    };
-
+    let home_directory = home!();
     let config_path = home_directory.join(".mst").join("config.toml");
 
     if config_path.exists() {
         fs::remove_file(config_path)?;
     }
-    
+
     let config = Config::new();
     config.save()?;
 

@@ -1,34 +1,25 @@
+use crate::{
+    config::file::Config,
+    cwd,
+    replace::replacer::Replacer,
+    testing::{runner::Test, test_result::TestResult},
+    Error,
+};
+use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
-
 use std::{
     fs,
-    io::Write,
-    process::{Child, Command, Output},
+    process::Command,
     sync::{Arc, Mutex},
-    time::{self, Instant},
+    time,
 };
-
-use crate::{config::file::Config, Error};
-use colored::Colorize;
-
-pub enum TestResult {
-    Accepted,
-    WrongAnswer(String, String),
-    Timeout,
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct TestPackage {
     pub name: String,
     pub tests: Vec<Test>,
     pub time_limit: u128,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Test {
-    pub input: String,
-    pub output: String,
 }
 
 impl TestPackage {
@@ -52,6 +43,12 @@ impl TestPackage {
     pub async fn generate_tests(&mut self, amount: u32) -> Result<(), Error> {
         println!("{} 📃 Compiling test generators...", "[1/2]".dimmed());
         let config = Config::load()?;
+        let current_wd = cwd!()?;
+
+        Replacer::from_path(&current_wd.join("gen.alg"))?
+            .replace_to_file(&current_wd.join("gen.cpp"))?;
+        Replacer::from_path(&current_wd.join("brute.alg"))?
+            .replace_to_file(&current_wd.join("brute.cpp"))?;
 
         // Compile the testcase generators
         let gen_compile_args: Vec<&str> = config.gen_compile_command.split(' ').collect();
@@ -114,7 +111,10 @@ impl TestPackage {
 
         for test in res {
             let test_unwrapped = test??; // LMAO
-            self.add_test(test_unwrapped.input.trim().to_string(), test_unwrapped.output.trim().to_string());
+            self.add_test(
+                test_unwrapped.input.trim().to_string(),
+                test_unwrapped.output.trim().to_string(),
+            );
         }
 
         if cfg!(windows) {
@@ -124,6 +124,8 @@ impl TestPackage {
             std::fs::remove_file("gen")?;
             std::fs::remove_file("brute")?;
         }
+        std::fs::remove_file("brute.cpp")?;
+        std::fs::remove_file("gen.cpp")?;
 
         println!("✅ Successfully generated {} testcases!", amount);
 
@@ -131,11 +133,11 @@ impl TestPackage {
     }
 
     /**
-        Save this testcase to a file in the `tests/` directory.
-        The filename is `<name>.json`.
-     */
+       Save this testcase to a file in the `tests/` directory.
+       The filename is `<name>.json`.
+    */
     pub fn save(&self) -> Result<(), Error> {
-        let current_dir = std::env::current_dir()?;
+        let current_dir = cwd!()?;
         let path = current_dir.join("tests");
         let file_name = format!("{}.json", self.name);
 
@@ -149,7 +151,7 @@ impl TestPackage {
         The file has to be encoded in JSON, and has to be deserializable.
     */
     pub fn load(name: &str) -> Result<Self, Error> {
-        let current_dir = std::env::current_dir()?;
+        let current_dir = cwd!()?;
         let path = current_dir.join("tests");
         let file_name = format!("{}.json", name);
 
@@ -173,6 +175,10 @@ impl TestPackage {
         let mut handles = vec![];
         let config = Config::load()?;
 
+        let current_wd = cwd!()?;
+
+        Replacer::from_path(&current_wd.join("main.alg"))?
+            .replace_to_file(&current_wd.join("main.cpp"))?;
         // Compile the main program, using the first argument as the executable name, and the rest as the args
         let main_compile_command: Vec<&str> = config.main_compile_command.split(' ').collect();
         let main_c = Command::new(&main_compile_command[0])
@@ -286,111 +292,15 @@ impl TestPackage {
 
         println!("Log written to {}-log.txt.", now_timestamp.as_millis());
 
-        std::fs::write(
-            format!("{}-log.txt", now_timestamp.as_millis()),
-            log_string
-        )?;
+        std::fs::write(format!("{}-log.txt", now_timestamp.as_millis()), log_string)?;
 
         if cfg!(windows) {
             std::fs::remove_file("main.exe")?;
         } else {
             std::fs::remove_file("main")?;
         }
+        std::fs::remove_file("main.cpp")?;
 
         Ok(())
-    }
-}
-
-impl Test {
-    pub fn generate_testcase() -> Result<Self, Error> {
-        let gen: Result<Output, std::io::Error>;
-        let mut brute: Child;
-
-        if cfg!(windows) {
-            gen = Command::new(".\\gen.exe")
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .output();
-        } else {
-            gen = Command::new("./gen")
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .output();
-        }
-
-        let gen = match gen {
-            Ok(gen) => gen,
-            Err(e) => return Err(e.into()),
-        };
-
-        let input = String::from_utf8(gen.stdout)?;
-
-        if cfg!(windows) {
-            brute = Command::new(".\\brute.exe")
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .spawn()?;
-        } else {
-            brute = Command::new("./brute")
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .spawn()?;
-        }
-
-        let brute_stdin = brute.stdin.take();
-
-        if let Some(mut brute_stdin) = brute_stdin {
-            brute_stdin.write_all(input.as_bytes())?;
-        } else {
-            return Err("Failed to write to brute stdin".into());
-        }
-
-        let brute_output = brute.wait_with_output()?;
-
-        let output = String::from_utf8(brute_output.stdout)?;
-
-        Ok(Self { input, output })
-    }
-
-    pub fn test(&self, tl: u128) -> Result<TestResult, Error> {
-        let mut main: Child;
-
-        let clock = Instant::now();
-
-        if cfg!(windows) {
-            main = Command::new(".\\main.exe")
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .spawn()?;
-        } else {
-            main = Command::new("./main")
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .spawn()?;
-        }
-
-        let main_stdin = main.stdin.take();
-
-        if let Some(mut main_stdin) = main_stdin {
-            main_stdin.write_all(self.input.as_bytes())?;
-        } else {
-            return Err("Failed to write to main stdin".into());
-        }
-
-        let main_output = main.wait_with_output()?;
-
-        let output = String::from_utf8(main_output.stdout)?;
-
-        let time = clock.elapsed().as_millis();
-
-        if output.trim() != self.output.trim() {
-            return Ok(TestResult::WrongAnswer(output, self.output.clone()));
-        }
-
-        if time > tl {
-            return Ok(TestResult::Timeout);
-        }
-
-        Ok(TestResult::Accepted)
     }
 }
