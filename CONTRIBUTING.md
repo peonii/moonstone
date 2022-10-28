@@ -1,0 +1,6 @@
+- Use `cargo clippy` before making pr's
+- Make sure the change is justified
+- If implementing a new feature, describe why you think it should be implemented
+- Keep the code concise and readable
+- Don't be afraid to use multiple files
+- Don't modify top level files unless absolutely necessary
