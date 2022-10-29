@@ -37,10 +37,18 @@ it's an incredibly easy process.
 ## File Structure
 
 ```
-📄 main.cpp - Main algorithm
-📄 brute.cpp - Brute-force algorithm (used for generating output)
-📄 gen.cpp - Input generator
+📄 main.alg - Main algorithm
+📄 brute.alg - Brute-force algorithm (used for generating output)
+📄 gen.alg - Input generator
 ```
+
+*Why do I have to use .alg files?*
+This is for comfort, to not have to paste the same lines in every single program you write.
+Why not use default files instead? Because some programs may require something extra.
+This also cleans the code up and allows for nicer, more readable algorithms.
+
+*Can I disable the replacer?*
+You will be able to disable it in the next update.
 
 ## License
 
