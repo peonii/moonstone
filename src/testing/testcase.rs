@@ -1,7 +1,7 @@
 use crate::{
     config::file::Config,
     cwd,
-    replace::replacer::Replacer,
+    //replace::replacer::Replacer,
     testing::{runner::Test, test_result::TestResult},
     Error,
 };
@@ -43,12 +43,12 @@ impl TestPackage {
     pub async fn generate_tests(&mut self, amount: u32) -> Result<(), Error> {
         println!("{} 📃 Compiling test generators...", "[1/2]".dimmed());
         let config = Config::load()?;
-        let current_wd = cwd!()?;
+        //let current_wd = cwd!()?;
 
-        Replacer::from_path(&current_wd.join("gen.alg"))?
-            .replace_to_file(&current_wd.join("gen.cpp"))?;
-        Replacer::from_path(&current_wd.join("brute.alg"))?
-            .replace_to_file(&current_wd.join("brute.cpp"))?;
+        // Replacer::from_path(&current_wd.join("gen.alg"))?
+        //     .replace_to_file(&current_wd.join("gen.cpp"))?;
+        // Replacer::from_path(&current_wd.join("brute.alg"))?
+        //     .replace_to_file(&current_wd.join("brute.cpp"))?;
 
         // Compile the testcase generators
         let gen_compile_args: Vec<&str> = config.gen_compile_command.split(' ').collect();
@@ -124,8 +124,6 @@ impl TestPackage {
             std::fs::remove_file("gen")?;
             std::fs::remove_file("brute")?;
         }
-        std::fs::remove_file("brute.cpp")?;
-        std::fs::remove_file("gen.cpp")?;
 
         println!("✅ Successfully generated {} testcases!", amount);
 
@@ -175,10 +173,10 @@ impl TestPackage {
         let mut handles = vec![];
         let config = Config::load()?;
 
-        let current_wd = cwd!()?;
+        //let current_wd = cwd!()?;
 
-        Replacer::from_path(&current_wd.join("main.alg"))?
-            .replace_to_file(&current_wd.join("main.cpp"))?;
+        // Replacer::from_path(&current_wd.join("main.alg"))?
+        //     .replace_to_file(&current_wd.join("main.cpp"))?;
         // Compile the main program, using the first argument as the executable name, and the rest as the args
         let main_compile_command: Vec<&str> = config.main_compile_command.split(' ').collect();
         let main_c = Command::new(&main_compile_command[0])
@@ -299,7 +297,6 @@ impl TestPackage {
         } else {
             std::fs::remove_file("main")?;
         }
-        std::fs::remove_file("main.cpp")?;
 
         Ok(())
     }

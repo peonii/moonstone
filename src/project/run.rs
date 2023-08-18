@@ -6,15 +6,15 @@ use std::process::Command;
 pub fn run_project() -> Result<(), Error> {
     let config = Config::load()?;
 
-    let mut current_path = cwd!()?;
+    //let mut current_path = cwd!()?;
 
-    current_path.push("main.alg");
+    //current_path.push("main.alg");
 
-    let mut new_path = cwd!()?;
+    //let mut new_path = cwd!()?;
 
-    new_path.push("main.cpp");
+    //new_path.push("main.cpp");
 
-    Replacer::from_path(&current_path)?.replace_to_file(&new_path)?;
+    //Replacer::from_path(&current_path)?.replace_to_file(&new_path)?;
 
     let compile_command: Vec<&str> = config.main_compile_command.split(' ').collect();
     let main_c = Command::new(&compile_command[0])
